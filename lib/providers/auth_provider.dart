@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/firebase_auth_service.dart';
+import '../models/user.dart' as app;
 
 class AuthProvider extends ChangeNotifier {
-  final FirebaseAuthService _authService = FirebaseAuthService();
-  
-  User? _user;
+  app.User? _user;
   bool _isLoading = false;
   String? _error;
 
   // Getters
-  User? get user => _user;
+  app.User? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
 
   // Initialize auth state listener
-  void initialize() {
-    _authService.authStateChanges.listen((User? user) {
-      _user = user;
-      notifyListeners();
-    });
-  }
+  void initialize() {}
 
   // Sign up with email and password
   Future<bool> signUp({
@@ -33,18 +25,23 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final result = await _authService.signUpWithEmailAndPassword(
-        email: email,
-        password: password,
+      // In-memory fake user creation
+      _user = app.User(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
+        email: email,
+        profileImageUrl: null,
+        dateOfBirth: DateTime(2000, 1, 1),
+        gender: 'unspecified',
+        height: 170,
+        weight: 70,
+        fitnessLevel: 'beginner',
+        goals: const ['Stay fit'],
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
-      
-      if (result?.user != null) {
-        _user = result!.user;
-        _setLoading(false);
-        return true;
-      }
-      return false;
+      _setLoading(false);
+      return true;
     } catch (e) {
       _setError(e.toString());
       _setLoading(false);
@@ -61,17 +58,23 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final result = await _authService.signInWithEmailAndPassword(
+      // Accept any credentials and sign in as an in-memory user
+      _user = app.User(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: email.split('@').first,
         email: email,
-        password: password,
+        profileImageUrl: null,
+        dateOfBirth: DateTime(2000, 1, 1),
+        gender: 'unspecified',
+        height: 170,
+        weight: 70,
+        fitnessLevel: 'beginner',
+        goals: const ['Stay fit'],
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
-      
-      if (result?.user != null) {
-        _user = result!.user;
-        _setLoading(false);
-        return true;
-      }
-      return false;
+      _setLoading(false);
+      return true;
     } catch (e) {
       _setError(e.toString());
       _setLoading(false);
@@ -82,14 +85,8 @@ class AuthProvider extends ChangeNotifier {
   // Sign out
   Future<void> signOut() async {
     _setLoading(true);
-    try {
-      await _authService.signOut();
-      _user = null;
-      _setLoading(false);
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-    }
+    _user = null;
+    _setLoading(false);
   }
 
   // Reset password
@@ -97,15 +94,10 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    try {
-      await _authService.resetPassword(email);
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
-    }
+    // No-op for in-memory auth
+    await Future.delayed(const Duration(milliseconds: 300));
+    _setLoading(false);
+    return true;
   }
 
   // Update user profile
@@ -116,18 +108,18 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    try {
-      await _authService.updateUserProfile(
-        displayName: displayName,
-        photoURL: photoURL,
-      );
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setError(e.toString());
+    if (_user == null) {
       _setLoading(false);
       return false;
     }
+    _user = _user!.copyWith(
+      name: displayName ?? _user!.name,
+      profileImageUrl: photoURL ?? _user!.profileImageUrl,
+      updatedAt: DateTime.now(),
+    );
+    _setLoading(false);
+    notifyListeners();
+    return true;
   }
 
   // Helper methods
