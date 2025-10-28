@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../utils/app_theme.dart';
+import '../models/nutrition.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
@@ -200,12 +201,23 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton.icon(
-              onPressed: () {
-                _showAddFoodDialog();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Food'),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    _showAddFoodDialog();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Food'),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    _showManualCalorieDialog();
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Quick Add'),
+                ),
+              ],
             ),
           ],
         ),
@@ -222,110 +234,128 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
   }
 
   Widget _buildMealCard(String mealName, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+    return Consumer<NutritionProvider>(
+      builder: (context, nutritionProvider, child) {
+        final todayLog = nutritionProvider.getTodayLog();
+        final mealEntries = todayLog?.meals.where((entry) => entry.mealType == mealName).toList() ?? [];
+        final totalCalories = mealEntries.fold(0, (sum, entry) => sum + entry.calories);
+        
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          mealName,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: const Text('0 items • 0 calories'),
-        trailing: IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: () {
-            _showAddFoodDialog();
-          },
-        ),
-      ),
+          child: ListTile(
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            title: Text(
+              mealName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text('${mealEntries.length} items • $totalCalories calories'),
+            trailing: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                _showAddFoodDialog();
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildWaterIntake() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<NutritionProvider>(
+      builder: (context, nutritionProvider, child) {
+        final progress = nutritionProvider.getNutritionProgress();
+        final waterData = progress['water'];
+        final consumed = waterData['consumed'] as double;
+        final goal = waterData['goal'] as double;
+        final percentage = waterData['percentage'] as double;
+
+        return Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Water Intake',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    _showWaterDialog();
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Water'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.water_drop, color: Colors.blue[400]),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '0 / 2.5 L',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '0% of daily goal',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 100,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 0.0, // 0% progress
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue[400],
-                        borderRadius: BorderRadius.circular(4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Water Intake',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                    TextButton.icon(
+                      onPressed: () {
+                        _showWaterDialog();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Water'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.water_drop, color: Colors.blue[400]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${consumed.toStringAsFixed(1)} / ${goal.toStringAsFixed(1)} L',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${percentage.toStringAsFixed(1)}% of daily goal',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 100,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: (percentage / 100).clamp(0.0, 1.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue[400],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -336,36 +366,7 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
           return const Center(child: CircularProgressIndicator());
         }
 
-        final foodItems = nutritionProvider.foodItems;
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Search bar
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search food items...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Food categories
-            _buildFoodCategories(),
-            const SizedBox(height: 16),
-            // Food items
-            Text(
-              'Popular Foods',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...foodItems.map((food) => _buildFoodItemCard(food)).toList(),
-          ],
-        );
+        return FoodSearchTab(nutritionProvider: nutritionProvider);
       },
     );
   }
@@ -438,7 +439,7 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
         trailing: IconButton(
           icon: const Icon(Icons.add),
           onPressed: () {
-            _showAddFoodDialog();
+            _showAddFoodDialog(selectedFoodId: food.id);
           },
         ),
       ),
@@ -574,18 +575,14 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
     );
   }
 
-  void _showAddFoodDialog() {
+  void _showAddFoodDialog({String? selectedFoodId}) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Food'),
-        content: const Text('Food logging feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => AddFoodDialog(
+        selectedFoodId: selectedFoodId,
+        onFoodAdded: (foodId, quantity, mealType) {
+          context.read<NutritionProvider>().addFoodToLog(foodId, quantity, mealType);
+        },
       ),
     );
   }
@@ -593,15 +590,10 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
   void _showWaterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Water'),
-        content: const Text('Water tracking feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => AddWaterDialog(
+        onWaterAdded: (amount) {
+          context.read<NutritionProvider>().addWaterToLog(amount);
+        },
       ),
     );
   }
@@ -609,15 +601,10 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
   void _showEditGoalsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Goals'),
-        content: const Text('Goal editing feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => EditGoalsDialog(
+        onGoalsUpdated: (newGoals) {
+          context.read<NutritionProvider>().updateGoals(newGoals);
+        },
       ),
     );
   }
@@ -625,15 +612,30 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
   void _showGoalTypeDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Goal Type'),
-        content: const Text('Goal type selection feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => GoalTypeDialog(
+        onGoalTypeUpdated: (goalType) {
+          final currentGoals = context.read<NutritionProvider>().goals;
+          final newGoals = UserNutritionGoals(
+            dailyCalories: currentGoals.dailyCalories,
+            dailyProtein: currentGoals.dailyProtein,
+            dailyCarbs: currentGoals.dailyCarbs,
+            dailyFat: currentGoals.dailyFat,
+            dailyWater: currentGoals.dailyWater,
+            goal: goalType,
+          );
+          context.read<NutritionProvider>().updateGoals(newGoals);
+        },
+      ),
+    );
+  }
+
+  void _showManualCalorieDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => ManualCalorieDialog(
+        onCalorieAdded: (calories, mealType, description) {
+          context.read<NutritionProvider>().addManualCalorieEntry(calories, mealType, description);
+        },
       ),
     );
   }
@@ -670,5 +672,912 @@ class _NutritionScreenState extends State<NutritionScreen> with TickerProviderSt
       default:
         return Icons.restaurant;
     }
+  }
+}
+
+class AddFoodDialog extends StatefulWidget {
+  final String? selectedFoodId;
+  final Function(String foodId, double quantity, String mealType) onFoodAdded;
+
+  const AddFoodDialog({
+    super.key,
+    this.selectedFoodId,
+    required this.onFoodAdded,
+  });
+
+  @override
+  State<AddFoodDialog> createState() => _AddFoodDialogState();
+}
+
+class _AddFoodDialogState extends State<AddFoodDialog> {
+  String? _selectedFoodId;
+  double _quantity = 1.0;
+  String _selectedMealType = 'Breakfast';
+  final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFoodId = widget.selectedFoodId;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<NutritionProvider>(
+      builder: (context, nutritionProvider, child) {
+        final foodItems = nutritionProvider.foodItems;
+        final selectedFood = _selectedFoodId != null
+            ? foodItems.firstWhere((f) => f.id == _selectedFoodId)
+            : null;
+
+        return AlertDialog(
+          title: const Text('Add Food'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Food selection dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedFoodId,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Food',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: foodItems.map((food) {
+                    return DropdownMenuItem(
+                      value: food.id,
+                      child: Text(food.name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedFoodId = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Quantity input
+                TextFormField(
+                  initialValue: _quantity.toString(),
+                  decoration: InputDecoration(
+                    labelText: 'Quantity',
+                    border: const OutlineInputBorder(),
+                    suffixText: selectedFood?.unit ?? 'units',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    _quantity = double.tryParse(value) ?? 1.0;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Meal type selection
+                DropdownButtonFormField<String>(
+                  value: _selectedMealType,
+                  decoration: const InputDecoration(
+                    labelText: 'Meal Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _mealTypes.map((mealType) {
+                    return DropdownMenuItem(
+                      value: mealType,
+                      child: Text(mealType),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedMealType = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Nutrition preview
+                if (selectedFood != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nutrition Info (${_quantity}x ${selectedFood.unit})',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Calories: ${(_quantity * selectedFood.caloriesPerUnit).round()}'),
+                              Text('Protein: ${(_quantity * selectedFood.proteinPerUnit).toStringAsFixed(1)}g'),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Carbs: ${(_quantity * selectedFood.carbsPerUnit).toStringAsFixed(1)}g'),
+                              Text('Fat: ${(_quantity * selectedFood.fatPerUnit).toStringAsFixed(1)}g'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: _selectedFoodId != null
+                  ? () {
+                      widget.onFoodAdded(_selectedFoodId!, _quantity, _selectedMealType);
+                      Navigator.pop(context);
+                    }
+                  : null,
+              child: const Text('Add Food'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class AddWaterDialog extends StatefulWidget {
+  final Function(double amount) onWaterAdded;
+
+  const AddWaterDialog({
+    super.key,
+    required this.onWaterAdded,
+  });
+
+  @override
+  State<AddWaterDialog> createState() => _AddWaterDialogState();
+}
+
+class _AddWaterDialogState extends State<AddWaterDialog> {
+  double _amount = 0.25; // Default to 250ml
+  final List<double> _quickAmounts = [0.25, 0.5, 0.75, 1.0]; // 250ml, 500ml, 750ml, 1L
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Water'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Select amount to add:',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          
+          // Quick amount buttons
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _quickAmounts.map((amount) {
+              final isSelected = _amount == amount;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _amount = amount;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryColor : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${(amount * 1000).round()}ml',
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Custom amount input
+          TextFormField(
+            initialValue: (_amount * 1000).round().toString(),
+            decoration: const InputDecoration(
+              labelText: 'Custom Amount (ml)',
+              border: OutlineInputBorder(),
+              suffixText: 'ml',
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              final mlAmount = double.tryParse(value) ?? 0;
+              _amount = mlAmount / 1000; // Convert to liters
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Current selection display
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.water_drop, color: Colors.blue[400]),
+                const SizedBox(width: 8),
+                Text(
+                  'Adding ${(_amount * 1000).round()}ml (${_amount.toStringAsFixed(2)}L)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _amount > 0
+              ? () {
+                  widget.onWaterAdded(_amount);
+                  Navigator.pop(context);
+                }
+              : null,
+          child: const Text('Add Water'),
+        ),
+      ],
+    );
+  }
+}
+
+class EditGoalsDialog extends StatefulWidget {
+  final Function(UserNutritionGoals newGoals) onGoalsUpdated;
+
+  const EditGoalsDialog({
+    super.key,
+    required this.onGoalsUpdated,
+  });
+
+  @override
+  State<EditGoalsDialog> createState() => _EditGoalsDialogState();
+}
+
+class _EditGoalsDialogState extends State<EditGoalsDialog> {
+  late TextEditingController _caloriesController;
+  late TextEditingController _proteinController;
+  late TextEditingController _carbsController;
+  late TextEditingController _fatController;
+  late TextEditingController _waterController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with default values - will be updated in build method
+    _caloriesController = TextEditingController(text: '2000');
+    _proteinController = TextEditingController(text: '150');
+    _carbsController = TextEditingController(text: '250');
+    _fatController = TextEditingController(text: '65');
+    _waterController = TextEditingController(text: '2.5');
+  }
+
+  @override
+  void dispose() {
+    _caloriesController.dispose();
+    _proteinController.dispose();
+    _carbsController.dispose();
+    _fatController.dispose();
+    _waterController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<NutritionProvider>(
+      builder: (context, nutritionProvider, child) {
+        // Update controllers with current values if they haven't been set yet
+        if (_caloriesController.text == '2000') {
+          final currentGoals = nutritionProvider.goals;
+          _caloriesController.text = currentGoals.dailyCalories.toString();
+          _proteinController.text = currentGoals.dailyProtein.toString();
+          _carbsController.text = currentGoals.dailyCarbs.toString();
+          _fatController.text = currentGoals.dailyFat.toString();
+          _waterController.text = currentGoals.dailyWater.toString();
+        }
+
+        return AlertDialog(
+          title: const Text('Edit Daily Goals'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _caloriesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Calories',
+                    border: OutlineInputBorder(),
+                    suffixText: 'kcal',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _proteinController,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Protein',
+                    border: OutlineInputBorder(),
+                    suffixText: 'g',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _carbsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Carbs',
+                    border: OutlineInputBorder(),
+                    suffixText: 'g',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _fatController,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Fat',
+                    border: OutlineInputBorder(),
+                    suffixText: 'g',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _waterController,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Water',
+                    border: OutlineInputBorder(),
+                    suffixText: 'L',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final newGoals = UserNutritionGoals(
+                  dailyCalories: int.tryParse(_caloriesController.text) ?? 2000,
+                  dailyProtein: double.tryParse(_proteinController.text) ?? 150,
+                  dailyCarbs: double.tryParse(_carbsController.text) ?? 250,
+                  dailyFat: double.tryParse(_fatController.text) ?? 65,
+                  dailyWater: double.tryParse(_waterController.text) ?? 2.5,
+                  goal: nutritionProvider.goals.goal,
+                );
+                widget.onGoalsUpdated(newGoals);
+                Navigator.pop(context);
+              },
+              child: const Text('Save Goals'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class GoalTypeDialog extends StatefulWidget {
+  final Function(String goalType) onGoalTypeUpdated;
+
+  const GoalTypeDialog({
+    super.key,
+    required this.onGoalTypeUpdated,
+  });
+
+  @override
+  State<GoalTypeDialog> createState() => _GoalTypeDialogState();
+}
+
+class _GoalTypeDialogState extends State<GoalTypeDialog> {
+  String _selectedGoalType = 'maintenance';
+  final List<Map<String, dynamic>> _goalTypes = [
+    {
+      'value': 'weight_loss',
+      'label': 'Weight Loss',
+      'description': 'Reduce calorie intake to lose weight',
+      'icon': Icons.trending_down,
+      'color': Colors.red,
+    },
+    {
+      'value': 'maintenance',
+      'label': 'Weight Maintenance',
+      'description': 'Maintain current weight',
+      'icon': Icons.trending_flat,
+      'color': Colors.green,
+    },
+    {
+      'value': 'weight_gain',
+      'label': 'Weight Gain',
+      'description': 'Increase calorie intake to gain weight',
+      'icon': Icons.trending_up,
+      'color': Colors.blue,
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedGoalType = 'maintenance'; // Default value
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<NutritionProvider>(
+      builder: (context, nutritionProvider, child) {
+        // Update selected goal type with current value if it's still default
+        if (_selectedGoalType == 'maintenance') {
+          _selectedGoalType = nutritionProvider.goals.goal;
+        }
+
+        return AlertDialog(
+          title: const Text('Select Goal Type'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _goalTypes.map((goalType) {
+              final isSelected = _selectedGoalType == goalType['value'];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                color: isSelected ? goalType['color'].withOpacity(0.1) : null,
+                child: ListTile(
+                  leading: Icon(
+                    goalType['icon'],
+                    color: goalType['color'],
+                  ),
+                  title: Text(
+                    goalType['label'],
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Text(goalType['description']),
+                  trailing: isSelected
+                      ? Icon(Icons.check_circle, color: goalType['color'])
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedGoalType = goalType['value'];
+                    });
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                widget.onGoalTypeUpdated(_selectedGoalType);
+                Navigator.pop(context);
+              },
+              child: const Text('Save Goal Type'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class FoodSearchTab extends StatefulWidget {
+  final NutritionProvider nutritionProvider;
+
+  const FoodSearchTab({
+    super.key,
+    required this.nutritionProvider,
+  });
+
+  @override
+  State<FoodSearchTab> createState() => _FoodSearchTabState();
+}
+
+class _FoodSearchTabState extends State<FoodSearchTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'All';
+  List<FoodItem> _filteredFoods = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredFoods = widget.nutritionProvider.foodItems;
+  }
+
+  void _filterFoods() {
+    setState(() {
+      final searchQuery = _searchController.text.toLowerCase();
+      final foods = widget.nutritionProvider.foodItems;
+      
+      _filteredFoods = foods.where((food) {
+        final matchesSearch = searchQuery.isEmpty || 
+            food.name.toLowerCase().contains(searchQuery) ||
+            food.description.toLowerCase().contains(searchQuery);
+        
+        final matchesCategory = _selectedCategory == 'All' || 
+            food.category.toLowerCase() == _selectedCategory.toLowerCase();
+        
+        return matchesSearch && matchesCategory;
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Search bar
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search food items...',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onChanged: (_) => _filterFoods(),
+        ),
+        const SizedBox(height: 16),
+        
+        // Food categories
+        _buildFoodCategories(),
+        const SizedBox(height: 16),
+        
+        // Food items
+        Text(
+          _selectedCategory == 'All' ? 'All Foods' : _selectedCategory,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Food items list
+        if (_filteredFoods.isEmpty)
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No foods found',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._filteredFoods.map((food) => _buildFoodItemCard(food)).toList(),
+      ],
+    );
+  }
+
+  Widget _buildFoodCategories() {
+    final categories = ['All', 'Protein', 'Carbs', 'Fruits', 'Vegetables', 'Dairy'];
+    
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final isSelected = _selectedCategory == category;
+          
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(category),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+                _filterFoods();
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFoodItemCard(FoodItem food) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: _getCategoryColor(food.category).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            _getCategoryIcon(food.category),
+            color: _getCategoryColor(food.category),
+          ),
+        ),
+        title: Text(
+          food.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(food.description),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                _buildNutritionInfo('${food.caloriesPerUnit}', 'cal'),
+                const SizedBox(width: 8),
+                _buildNutritionInfo('${food.proteinPerUnit}g', 'protein'),
+                const SizedBox(width: 8),
+                _buildNutritionInfo('${food.carbsPerUnit}g', 'carbs'),
+              ],
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () {
+            Navigator.of(context).pop(); // Close the tab view
+            // Show add food dialog with pre-selected food
+            showDialog(
+              context: context,
+              builder: (context) => AddFoodDialog(
+                selectedFoodId: food.id,
+                onFoodAdded: (foodId, quantity, mealType) {
+                  widget.nutritionProvider.addFoodToLog(foodId, quantity, mealType);
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNutritionInfo(String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$value $label',
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'protein':
+        return Colors.red;
+      case 'carbs':
+        return Colors.orange;
+      case 'fruits':
+        return Colors.green;
+      case 'vegetables':
+        return Colors.lightGreen;
+      case 'dairy':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'protein':
+        return Icons.fitness_center;
+      case 'carbs':
+        return Icons.grain;
+      case 'fruits':
+        return Icons.apple;
+      case 'vegetables':
+        return Icons.eco;
+      case 'dairy':
+        return Icons.local_drink;
+      default:
+        return Icons.restaurant;
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+}
+
+class ManualCalorieDialog extends StatefulWidget {
+  final Function(int calories, String mealType, String description) onCalorieAdded;
+
+  const ManualCalorieDialog({
+    super.key,
+    required this.onCalorieAdded,
+  });
+
+  @override
+  State<ManualCalorieDialog> createState() => _ManualCalorieDialogState();
+}
+
+class _ManualCalorieDialogState extends State<ManualCalorieDialog> {
+  final TextEditingController _caloriesController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  String _selectedMealType = 'Breakfast';
+  final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+  final List<Map<String, dynamic>> _quickCalories = [
+    {'name': 'Apple', 'calories': 95},
+    {'name': 'Banana', 'calories': 105},
+    {'name': 'Coffee', 'calories': 5},
+    {'name': 'Tea', 'calories': 2},
+    {'name': 'Cookie', 'calories': 150},
+    {'name': 'Candy', 'calories': 200},
+    {'name': 'Soda', 'calories': 140},
+    {'name': 'Beer', 'calories': 150},
+  ];
+
+  @override
+  void dispose() {
+    _caloriesController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Quick Add Calories'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Quick calorie buttons
+            Text(
+              'Quick Add:',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _quickCalories.map((item) {
+                return GestureDetector(
+                  onTap: () {
+                    _caloriesController.text = item['calories'].toString();
+                    _descriptionController.text = item['name'];
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '${item['name']} (${item['calories']} cal)',
+                      style: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Manual input
+            TextFormField(
+              controller: _caloriesController,
+              decoration: const InputDecoration(
+                labelText: 'Calories',
+                border: OutlineInputBorder(),
+                suffixText: 'kcal',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+                hintText: 'e.g., Homemade sandwich',
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Meal type selection
+            DropdownButtonFormField<String>(
+              value: _selectedMealType,
+              decoration: const InputDecoration(
+                labelText: 'Meal Type',
+                border: OutlineInputBorder(),
+              ),
+              items: _mealTypes.map((mealType) {
+                return DropdownMenuItem(
+                  value: mealType,
+                  child: Text(mealType),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedMealType = value!;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final calories = int.tryParse(_caloriesController.text) ?? 0;
+            final description = _descriptionController.text.trim();
+            
+            if (calories > 0 && description.isNotEmpty) {
+              widget.onCalorieAdded(calories, _selectedMealType, description);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Add Calories'),
+        ),
+      ],
+    );
   }
 }

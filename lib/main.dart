@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'providers/user_provider.dart';
 import 'providers/workout_provider.dart';
 import 'providers/nutrition_provider.dart';
+import 'providers/auth_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/workout_screen.dart';
 import 'screens/nutrition_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
 import 'utils/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const FitnessApp());
 }
 
@@ -24,12 +29,13 @@ class FitnessApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => WorkoutProvider()),
         ChangeNotifierProvider(create: (_) => NutritionProvider()),
       ],
-      child: Consumer<UserProvider>(
-        builder: (context, userProvider, _) {
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, _) {
           return MaterialApp.router(
             title: 'Fitness App',
             debugShowCheckedModeBanner: false,
@@ -50,6 +56,14 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) => const SignupScreen(),
     ),
     GoRoute(
       path: '/home',

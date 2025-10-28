@@ -76,6 +76,183 @@ class NutritionProvider extends ChangeNotifier {
     }
   }
 
+  // Add water to today's log
+  Future<void> addWaterToLog(double amount) async {
+    try {
+      final today = DateTime.now();
+      
+      // Find or create today's log
+      NutritionLog? todayLog = getTodayLog();
+      bool isNewLog = false;
+      if (todayLog == null) {
+        todayLog = NutritionLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          date: today,
+          meals: [],
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+          waterIntake: 0,
+        );
+        _nutritionLogs.add(todayLog);
+        isNewLog = true;
+      }
+
+      // Add water to the log
+      final newWaterIntake = todayLog.waterIntake + amount;
+
+      // Create new NutritionLog with updated water intake
+      final updatedLog = NutritionLog(
+        id: todayLog.id,
+        date: todayLog.date,
+        meals: todayLog.meals,
+        totalCalories: todayLog.totalCalories,
+        totalProtein: todayLog.totalProtein,
+        totalCarbs: todayLog.totalCarbs,
+        totalFat: todayLog.totalFat,
+        waterIntake: newWaterIntake,
+      );
+
+      // Replace the old log with the new one
+      if (!isNewLog) {
+        final logIndex = _nutritionLogs.indexWhere((log) => log.id == todayLog!.id);
+        if (logIndex != -1) {
+          _nutritionLogs[logIndex] = updatedLog;
+        }
+      } else {
+        // For new logs, just add the updated log
+        _nutritionLogs[_nutritionLogs.length - 1] = updatedLog;
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to add water to log: $e');
+    }
+  }
+
+  // Add manual calorie entry
+  Future<void> addManualCalorieEntry(int calories, String mealType, String description) async {
+    try {
+      final today = DateTime.now();
+      
+      // Find or create today's log
+      NutritionLog? todayLog = getTodayLog();
+      bool isNewLog = false;
+      if (todayLog == null) {
+        todayLog = NutritionLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          date: today,
+          meals: [],
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+          waterIntake: 0,
+        );
+        _nutritionLogs.add(todayLog);
+        isNewLog = true;
+      }
+
+      // Create manual food entry
+      final foodEntry = FoodEntry(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        foodId: 'manual_${DateTime.now().millisecondsSinceEpoch}',
+        foodName: description,
+        quantity: 1.0,
+        unit: 'serving',
+        calories: calories,
+        protein: 0, // Manual entries don't track macros
+        carbs: 0,
+        fat: 0,
+        mealType: mealType,
+        loggedAt: DateTime.now(),
+      );
+
+      // Create new meals list with the added food
+      final updatedMeals = List<FoodEntry>.from(todayLog.meals)..add(foodEntry);
+      
+      // Calculate totals
+      final totalCalories = updatedMeals.fold(0, (sum, meal) => sum + meal.calories);
+      final totalProtein = updatedMeals.fold(0.0, (sum, meal) => sum + meal.protein);
+      final totalCarbs = updatedMeals.fold(0.0, (sum, meal) => sum + meal.carbs);
+      final totalFat = updatedMeals.fold(0.0, (sum, meal) => sum + meal.fat);
+
+      // Create new NutritionLog with updated data
+      final updatedLog = NutritionLog(
+        id: todayLog.id,
+        date: todayLog.date,
+        meals: updatedMeals,
+        totalCalories: totalCalories,
+        totalProtein: totalProtein,
+        totalCarbs: totalCarbs,
+        totalFat: totalFat,
+        waterIntake: todayLog.waterIntake,
+      );
+
+      // Replace the old log with the new one
+      if (!isNewLog) {
+        final logIndex = _nutritionLogs.indexWhere((log) => log.id == todayLog!.id);
+        if (logIndex != -1) {
+          _nutritionLogs[logIndex] = updatedLog;
+        }
+      } else {
+        _nutritionLogs[_nutritionLogs.length - 1] = updatedLog;
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to add manual calorie entry: $e');
+    }
+  }
+
+  // Calculate calories from recipe
+  Map<String, double> calculateRecipeCalories(List<Map<String, dynamic>> ingredients) {
+    double totalCalories = 0;
+    double totalProtein = 0;
+    double totalCarbs = 0;
+    double totalFat = 0;
+
+    for (final ingredient in ingredients) {
+      final foodId = ingredient['foodId'] as String;
+      final quantity = ingredient['quantity'] as double;
+      
+      try {
+        final food = _foodItems.firstWhere((f) => f.id == foodId);
+        totalCalories += food.caloriesPerUnit * quantity;
+        totalProtein += food.proteinPerUnit * quantity;
+        totalCarbs += food.carbsPerUnit * quantity;
+        totalFat += food.fatPerUnit * quantity;
+      } catch (e) {
+        // Skip if food not found
+        continue;
+      }
+    }
+
+    return {
+      'calories': totalCalories,
+      'protein': totalProtein,
+      'carbs': totalCarbs,
+      'fat': totalFat,
+    };
+  }
+
+  // Get calorie estimation for common activities
+  Map<String, int> getActivityCalories() {
+    return {
+      'Walking (3 mph)': 4,
+      'Running (6 mph)': 10,
+      'Cycling (12 mph)': 8,
+      'Swimming': 7,
+      'Weight Training': 5,
+      'Yoga': 3,
+      'Dancing': 6,
+      'Basketball': 8,
+      'Tennis': 7,
+      'Soccer': 9,
+    };
+  }
+
   // Add food to today's log
   Future<void> addFoodToLog(String foodId, double quantity, String mealType) async {
     try {
