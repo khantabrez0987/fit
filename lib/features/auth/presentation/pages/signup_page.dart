@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
-import '../../utils/app_theme.dart';
+import '../providers/auth_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -71,12 +71,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Name Field
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Full Name',
-                    prefixIcon: const Icon(Icons.person_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    prefixIcon: Icon(Icons.person_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -95,12 +92,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -131,9 +125,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           _obscurePassword = !_obscurePassword;
                         });
                       },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   validator: (value) {
@@ -166,9 +157,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         });
                       },
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -184,18 +172,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 24),
                 
                 // Sign Up Button
-                Consumer<AuthProvider>(
+                provider.Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _handleSignUp,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: authProvider.isLoading
                           ? const SizedBox(
                               height: 20,
@@ -219,7 +199,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 16),
                 
                 // Error Message
-                Consumer<AuthProvider>(
+                provider.Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     if (authProvider.error != null) {
                       return Container(
@@ -283,7 +263,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<AuthProvider>();
+      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
       
       final success = await authProvider.signUp(
         email: _emailController.text.trim(),
@@ -297,3 +277,4 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 }
+
